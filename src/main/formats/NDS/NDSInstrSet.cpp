@@ -167,9 +167,9 @@ void NDSInstr::getSampCollPtr(VGMRgn *rgn, int waNum) const {
   rgn->sampCollPtr = static_cast<NDSInstrSet*>(parInstrSet)->sampCollWAList[waNum];
 }
 
-void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get rid of duplicate code. Replace while loops with for loops. Replace floats with doubles (VGMTrans code seems to always prefer doubles for accuracy). Improve variable names.
+void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get rid of duplicate code. Replace while loops with for loops. Improve variable names.
   // Code was copied then converted to C++ from https://github.com/DaforLynx/adsr_calculator/blob/master/src/main.rs#L66 .
-  const float ZERO_VOL = -92544;
+  const double ZERO_VOL = -92544;
   const uint8_t ATTACK_TABLE[] = {
     255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240,
     239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224,
@@ -190,7 +190,7 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
     452, 480, 512, 549, 591, 640, 698, 768, 853, 960, 1097, 1280, 1536, 1920, 2560,
     3840, 7680, 15360, 65535,
   };
-  const float SUSTAIN_TABLE[] = {
+  const double SUSTAIN_TABLE[] = {
     -92544, -92416, -92288, -83328, -76928, -71936, -67840, -64384, -61440, -58880,
     -56576, -54400, -52480, -50688, -49024, -47488, -46080, -44672, -43392, -42240,
     -41088, -40064, -39040, -38016, -36992, -36096, -35328, -34432, -33664, -32896,
@@ -218,8 +218,8 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
   rgn->addADSRValue(offset + 4, 1, "Release Time");
   rgn->addChild(offset + 5, 1, "Pan");
 
-  float realAttack = 0;
-  float vel = ZERO_VOL;
+  double realAttack = 0;
+  double vel = ZERO_VOL;
   uint32_t steps = 0; // cycles
 
   if (AttackTime != 0) {
@@ -230,7 +230,7 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
         printf("NDSInstrSet.cpp: attack while loop had to be manually broken. vel: %f\n", vel);
       }
     }
-    realAttack = static_cast<float>(steps) / (1.0 / INTR_FREQUENCY);
+    realAttack = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
   } else {
     realAttack = SF2_ADSR_SECONDS_MAX;
   }
@@ -239,7 +239,7 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
   vel = 0; // should be max volume for calculating decay. "0" is max volume for nds.
   steps = 0;
 
-  float realDecay = 0;
+  double realDecay = 0;
   while (vel > ZERO_VOL) {
     steps += 1;
     vel -= DECAY_TABLE[DecayTime];
@@ -247,19 +247,19 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
       printf("NDSInstrSet.cpp: decay while loop had to be manually broken. vel: %f\n", vel);
     }
   }
-  realDecay = static_cast<float>(steps) / (1.0 / INTR_FREQUENCY);
+  realDecay = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
 
   rgn->decay_time = realDecay;
 
-  float realSustain = 0;
+  double realSustain = 0;
   if (SustainLev == 0) {
     //127.0
     //realSustain = 0;
     realSustain = dbToAmp(127.0); // dbToAmp is from ScaleConversion in util.
   } else {
-    float sus = SUSTAIN_TABLE[(127 - SustainLev)];
-    float amplitude = sus / ZERO_VOL; // 0 is 1.0, 127 is 0.0
-    float decibels = (20.0 * std::log10(std::abs(amplitude))) / 2.0; // For some reason having a less prominent sustain difference tends to sound more accurate
+    double sus = SUSTAIN_TABLE[(127 - SustainLev)];
+    double amplitude = sus / ZERO_VOL; // 0 is 1.0, 127 is 0.0
+    double decibels = (20.0 * std::log10(std::abs(amplitude))) / 2.0; // For some reason having a less prominent sustain difference tends to sound more accurate
     realSustain = dbToAmp(std::abs(decibels));
     //decibels.abs() // Written as "decibels to diminish by" in Polyphone
   }
@@ -268,7 +268,7 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
   vel = 0;
   steps = 0;
 
-  float realRelease = 0;
+  double realRelease = 0;
   while (vel > ZERO_VOL) {
     steps += 1;
     vel -= DECAY_TABLE[ReleaseTime];
@@ -276,7 +276,7 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
       printf("NDSInstrSet.cpp: release while loop had to be manually broken. vel: %f\n", vel);
     }
   }
-  realRelease = static_cast<float>(steps) / (1.0 / INTR_FREQUENCY);
+  realRelease = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
 
   rgn->release_time = realRelease;
 
