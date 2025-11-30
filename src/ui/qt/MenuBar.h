@@ -23,10 +23,6 @@
 #include "VGMColl.h"
 #include "RawFile.h"
 
-#include "VGMFile.h"
-#include "VGMColl.h"
-#include "RawFile.h"
-
 class QDockWidget;
 class VGMFileView;
 
