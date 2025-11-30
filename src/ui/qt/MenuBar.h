@@ -19,15 +19,15 @@
 #include <vector>
 
 #include "services/MenuManager.h"
+#include "VGMFile.h"
+#include "VGMColl.h"
+#include "RawFile.h"
 
 #include "VGMFile.h"
 #include "VGMColl.h"
 #include "RawFile.h"
 
 class QDockWidget;
-class VGMFile;
-class VGMColl;
-class RawFile;
 class VGMFileView;
 
 class MenuBar final : public QMenuBar {
