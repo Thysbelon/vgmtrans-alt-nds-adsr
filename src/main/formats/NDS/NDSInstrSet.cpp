@@ -167,9 +167,10 @@ void NDSInstr::getSampCollPtr(VGMRgn *rgn, int waNum) const {
   rgn->sampCollPtr = static_cast<NDSInstrSet*>(parInstrSet)->sampCollWAList[waNum];
 }
 
-void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get rid of duplicate code. Replace while loops with for loops. Improve variable names.
+void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get rid of duplicate code. Replace while loops with for loops.
   // Code was copied then converted to C++ from https://github.com/DaforLynx/adsr_calculator/blob/master/src/main.rs#L66 .
   const double ZERO_VOL = -92544;
+  const double MAX_VOL = 0;
   const uint8_t ATTACK_TABLE[] = {
     255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240,
     239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224,
@@ -218,67 +219,64 @@ void NDSInstr::getArticData(VGMRgn *rgn, uint32_t offset) const { // TODO: get r
   rgn->addADSRValue(offset + 4, 1, "Release Time");
   rgn->addChild(offset + 5, 1, "Pan");
 
-  double realAttack = 0;
-  double vel = ZERO_VOL;
+  double outAttack = 0;
+  double volume = ZERO_VOL;
   uint32_t steps = 0; // cycles
 
   if (AttackTime != 0) {
-    while (vel < -0.00001) { // fix -0.000000 weirdness. TODO: after changing all floats to doubles, check if the negative zero weirdness still happens; if not, change -0.00001 back to 0.
+    while (volume < -0.00001) { // fix -0.000000 weirdness. TODO: after changing all floats to doubles, check if the negative zero weirdness still happens; if not, change -0.00001 back to 0.
       steps += 1;
-      vel = ATTACK_TABLE[AttackTime] * vel / 0xff;
+      volume = ATTACK_TABLE[AttackTime] * volume / 0xff;
       if (steps >= 0xFFFFFF) {
-        printf("NDSInstrSet.cpp: attack while loop had to be manually broken. vel: %f\n", vel);
+        printf("NDSInstrSet.cpp: attack while loop had to be manually broken. volume: %f\n", volume);
       }
     }
-    realAttack = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
+    outAttack = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
   } else {
-    realAttack = SF2_ADSR_SECONDS_MAX;
+    outAttack = SF2_ADSR_SECONDS_MAX;
   }
-  rgn->attack_time = realAttack;
+  rgn->attack_time = outAttack;
 
-  vel = 0; // should be max volume for calculating decay. "0" is max volume for nds.
+  volume = MAX_VOL;
   steps = 0;
 
-  double realDecay = 0;
-  while (vel > ZERO_VOL) {
+  double outDecay = 0;
+  while (volume > ZERO_VOL) {
     steps += 1;
-    vel -= DECAY_TABLE[DecayTime];
+    volume -= DECAY_TABLE[DecayTime];
     if (steps >= 0xFFFFFF) {
-      printf("NDSInstrSet.cpp: decay while loop had to be manually broken. vel: %f\n", vel);
+      printf("NDSInstrSet.cpp: decay while loop had to be manually broken. volume: %f\n", volume);
     }
   }
-  realDecay = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
+  outDecay = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
 
-  rgn->decay_time = realDecay;
+  rgn->decay_time = outDecay;
 
-  double realSustain = 0;
+  double outSustain = 0;
   if (SustainLev == 0) {
-    //127.0
-    //realSustain = 0;
-    realSustain = dbToAmp(127.0); // dbToAmp is from ScaleConversion in util.
+    outSustain = dbToAmp(127.0); // dbToAmp is from ScaleConversion in util.
   } else {
     double sus = SUSTAIN_TABLE[(127 - SustainLev)];
     double amplitude = sus / ZERO_VOL; // 0 is 1.0, 127 is 0.0
     double decibels = (20.0 * std::log10(std::abs(amplitude))) / 2.0; // For some reason having a less prominent sustain difference tends to sound more accurate
-    realSustain = dbToAmp(std::abs(decibels));
-    //decibels.abs() // Written as "decibels to diminish by" in Polyphone
+    outSustain = dbToAmp(std::abs(decibels)); // Written as "decibels to diminish by" in Polyphone
   }
-  rgn->sustain_level = realSustain;
+  rgn->sustain_level = outSustain;
 
-  vel = 0;
+  volume = MAX_VOL;
   steps = 0;
 
-  double realRelease = 0;
-  while (vel > ZERO_VOL) {
+  double outRelease = 0;
+  while (volume > ZERO_VOL) {
     steps += 1;
-    vel -= DECAY_TABLE[ReleaseTime];
+    volume -= DECAY_TABLE[ReleaseTime];
     if (steps >= 0xFFFFFF) {
-      printf("NDSInstrSet.cpp: release while loop had to be manually broken. vel: %f\n", vel);
+      printf("NDSInstrSet.cpp: release while loop had to be manually broken. volume: %f\n", volume);
     }
   }
-  realRelease = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
+  outRelease = static_cast<double>(steps) / (1.0 / INTR_FREQUENCY);
 
-  rgn->release_time = realRelease;
+  rgn->release_time = outRelease;
 
   if (Pan == 0)
     rgn->pan = 0;
