@@ -20,6 +20,10 @@
 
 #include "services/MenuManager.h"
 
+#include "VGMFile.h"
+#include "VGMColl.h"
+#include "RawFile.h"
+
 class QDockWidget;
 class VGMFile;
 class VGMColl;
